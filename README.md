@@ -5,6 +5,8 @@
 
 Use the template file [archtecture1-freetier-ec2-mongo-docker.yaml](Templates/archtecture1-freetier-ec2-mongo-docker.yaml) on AWS.
 
+You can use [1-CLICK Deploy](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/create/review?templateURL=https://github.com/cassions/product_catalog_sample_web_app/blob/main/Templates/archtecture1-freetier-ec2-mongo-docker.yaml&stackName=ProdCatalogDemoAWS) to deploy it direct on AWS.
+
 ## MANUAL DEPLOY
 
 ### ENVIRONMENT SETUP
