@@ -1,4 +1,11 @@
-## ARQUITECTURE 1 - ALL ON EC2 WITH MONGO DB ON DOCKER (FREE)
+
+# ARCHITECTURE 1 - ALL ON EC2 WITH MONGO DB ON DOCKER (FREE)
+
+## AUTOMATIC DEPLOY WITH CLOUD FORMATION
+
+Use the template file [archtecture1-freetier-ec2-mongo-docker.yaml](Templates\archtecture1-freetier-ec2-mongo-docker.yaml) on AWS.
+
+## MANUAL DEPLOY
 
 ### ENVIRONMENT SETUP
 ```
