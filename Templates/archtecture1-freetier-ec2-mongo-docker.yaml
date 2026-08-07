@@ -6,6 +6,7 @@ Description: >
   on the same host, secured with a self-signed TLS CA. Reproduces the manual
   deploy steps end to end described in https://github.com/cassions/product_catalog_sample_web_app.
 
+# Organize the inputs into groups at the console UI.
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -50,6 +51,7 @@ Parameters:
 
   AllowedCidr:
     Type: String
+    Default: 0.0.0.0/0
     Description: >
       CIDR allowed to reach SSH (22) and the app (5000). Use YOUR_IP/32.
       0.0.0.0/0 exposes the lab to the whole internet.

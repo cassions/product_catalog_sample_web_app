@@ -98,12 +98,52 @@ Login again or run:
 2. Create a docker instance with MongoDB
 
 ```
-docker run -d --name docdb-local -p 27017:27017 -e MONGO_INITDB_ROOT_USERNAME=$DOCDB_USERNAME -e MONGO_INITDB_ROOT_PASSWORD=$DOCDB_PASSWORD -v $APP_INSTALL_FOLDER/mongo-tls:/etc/mongo-tls:ro mongo:7 --auth --tlsMode requireTLS --tlsCertificateKeyFile /etc/mongo-tls/server.pem --tlsCAFile /etc/mongo-tls/ca.crt --tlsAllowConnectionsWithoutCertificates
-````
+docker run -d --name docdb-local \
+  -p 27017:27017 \
+  -e MONGO_INITDB_ROOT_USERNAME=$DOCDB_USERNAME \
+  -e MONGO_INITDB_ROOT_PASSWORD=$DOCDB_PASSWORD \
+  -v $APP_INSTALL_FOLDER/mongo-tls:/etc/mongo-tls:ro \
+  mongo:7 \
+  --auth --tlsMode requireTLS \
+  --tlsCertificateKeyFile /etc/mongo-tls/server.pem \
+  --tlsCAFile /etc/mongo-tls/ca.crt \
+  --tlsAllowConnectionsWithoutCertificates
+```
 
-### START THE APP
+#### MANUALLY START THE APP
 
 ```
 cd $APP_INSTALL_FOLDER
 nohup python3 app.py &
-````
+```
+
+#### CREATE A SERVICE TO AUTOMATICALLY START THE APP AT BOOT
+
+1. Create a service for the app
+```
+cat > /etc/systemd/system/product-catalog.service <<EOF
+  [Unit]
+  Description=Product Catalog sample app
+  After=docker.service network-online.target
+  Requires=docker.service
+
+  [Service]
+  Type=simple
+  User=ec2-user
+  WorkingDirectory=$APP_DIR
+  EnvironmentFile=/etc/product-catalog.env
+  ExecStart=$VENV/bin/python $APP_DIR/app.py
+  Restart=always
+  RestartSec=5
+
+  [Install]
+  WantedBy=multi-user.target
+EOF
+```
+2. Reload the services
+
+`systemctl daemon-reload`
+
+3. Register/enable the service
+      
+`systemctl enable --now product-catalog.service`
