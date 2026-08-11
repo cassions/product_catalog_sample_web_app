@@ -3,14 +3,17 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: |
   Architecture 1 (free tier) - Product Catalog sample app on a single Amazon Linux 2023 instance, with MongoDB 7 in Docker on the same host over TLS. Launches into the account's default VPC - no network choices required. See https://github.com/cassions/product_catalog_sample_web_app
 
+# Input parameters for the template. The user can override them at stack creation time.
 Parameters:
 
+ # Who can reach SSH (22) and the app (5000).
   AllowedCidr:
     Type: String
     Default: 0.0.0.0/0
     Description: Who can reach SSH (22) and the app (5000). Use YOUR_IP/32 to lock it down.
     AllowedPattern: ^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$
 
+ # MongoDB root password for user "admin".
   DocDbPassword:
     Type: String
     Default: localdev123
@@ -21,27 +24,6 @@ Parameters:
     Description: MongoDB root password for user "admin".
 
 Resources:
-
-  # Lets you open a shell with Session Manager (no key pair, no port 22 needed).
-  InstanceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: ec2.amazonaws.com
-            Action: sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
-
-  InstanceProfile:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Roles:
-        - !Ref InstanceRole
-
   # No VpcId -> created in the default VPC. MongoDB (27017) stays closed:
   # the app reaches it over localhost.
   AppSecurityGroup:
@@ -66,7 +48,6 @@ Resources:
     Properties:
       ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
       InstanceType: t3.micro
-      IamInstanceProfile: !Ref InstanceProfile
       SecurityGroupIds:
         - !Ref AppSecurityGroup
       MetadataOptions:
@@ -74,6 +55,7 @@ Resources:
       Tags:
         - Key: Name
           Value: !Sub ${AWS::StackName}-product-catalog
+      # Shell script that runs on first boot. It installs Docker, MongoDB, and the sample app.
       UserData: !Base64
         Fn::Sub: |
           #!/bin/bash
@@ -169,11 +151,7 @@ Resources:
           systemctl enable --now product-catalog
 
 Outputs:
-
+ # Application URL to access the Product Catalog sample app. 
   AppUrl:
     Description: Product Catalog web app
     Value: !Sub http://${AppInstance.PublicIp}:5000
-
-  ShellCommand:
-    Description: Open a shell on the instance (no SSH key needed)
-    Value: !Sub aws ssm start-session --target ${AppInstance} --region ${AWS::Region}
