@@ -7,9 +7,9 @@ The diagram bellow shows the details about the *Architecture 1* which is all sel
 
 ## AUTOMATIC DEPLOY WITH CLOUD FORMATION
 
-Use the template file [archtecture1-freetier-ec2-mongo-docker-simplified](Templates/archtecture1-freetier-ec2-mongo-docker-simplified.yaml) on AWS Cloud Formation to automatically create the server. 
+Use the template file [archtecture1-freetier-ec2-mongo-docker-simplified](templates/archtecture1-freetier-ec2-mongo-docker-simplified.yaml) on AWS Cloud Formation to automatically create the server. 
 
-There is also another template [archtecture1-freetier-ec2-mongo-docker](Templates/archtecture1-freetier-ec2-mongo-docker.yaml) which provides more control over VPC, Subnet, and instance type.
+There is also another template [archtecture1-freetier-ec2-mongo-docker](templates/archtecture1-freetier-ec2-mongo-docker.yaml) which provides more control over VPC, Subnet, and instance type.
 
 
 
