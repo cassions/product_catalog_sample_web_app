@@ -1,11 +1,21 @@
 
-# ARCHITECTURE 1 - ALL RUNNING ON EC2 WITH MONGO DB ON DOCKER (FREE)
+# ARCHITECTURE 1 - ALL RUNNING ON EC2 WITH MONGODB ON DOCKER (FREE)
+
+The diagram bellow shows the details about the *Architecture 1* which is all self-contained in a single EC2 instance running MongoDB on Docker to avoid using DocumentDB and so keeping it on free tier.
+
+![Architecture 1](images\aws-architecture1-freetier-ec2-mongo.png)
 
 ## AUTOMATIC DEPLOY WITH CLOUD FORMATION
 
-Use the template file [archtecture1-freetier-ec2-mongo-docker.yaml](Templates/archtecture1-freetier-ec2-mongo-docker.yaml) on AWS Clound Formation.
+Use the template file [archtecture1-freetier-ec2-mongo-docker-simplified](Templates\archtecture1-freetier-ec2-mongo-docker-simplified.yaml) on AWS Cloud Formation to automatically create the server. 
+
+There is also another template [archtecture1-freetier-ec2-mongo-docker](Templates\archtecture1-freetier-ec2-mongo-docker.yaml) which provides more control over VPC, Subnet, and instance type.
+
+
 
 ## MANUAL DEPLOY
+
+To deploy this architecture manually just create an EC2 Linux instance on AWS, connect to it and follow the steps bellow.
 
 ### ENVIRONMENT SETUP
 ```
