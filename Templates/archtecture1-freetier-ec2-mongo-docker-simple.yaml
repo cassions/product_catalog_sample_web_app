@@ -1,0 +1,179 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: |
+  Architecture 1 (free tier) - Product Catalog sample app on a single Amazon Linux 2023 instance, with MongoDB 7 in Docker on the same host over TLS. Launches into the account's default VPC - no network choices required. See https://github.com/cassions/product_catalog_sample_web_app
+
+Parameters:
+
+  AllowedCidr:
+    Type: String
+    Default: 0.0.0.0/0
+    Description: Who can reach SSH (22) and the app (5000). Use YOUR_IP/32 to lock it down.
+    AllowedPattern: ^(\d{1,3}\.){3}\d{1,3}/\d{1,2}$
+
+  DocDbPassword:
+    Type: String
+    Default: localdev123
+    NoEcho: true
+    MinLength: 8
+    MaxLength: 64
+    AllowedPattern: '[a-zA-Z0-9!#%*_+=:.-]+'
+    Description: MongoDB root password for user "admin".
+
+Resources:
+
+  # Lets you open a shell with Session Manager (no key pair, no port 22 needed).
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref InstanceRole
+
+  # No VpcId -> created in the default VPC. MongoDB (27017) stays closed:
+  # the app reaches it over localhost.
+  AppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Product Catalog - SSH and app port
+      SecurityGroupIngress:
+        - Description: SSH
+          IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref AllowedCidr
+        - Description: Flask app
+          IpProtocol: tcp
+          FromPort: 5000
+          ToPort: 5000
+          CidrIp: !Ref AllowedCidr
+
+  # No SubnetId -> EC2 picks a default subnet, which assigns a public IP.
+  AppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: '{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}'
+      InstanceType: t3.micro
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds:
+        - !Ref AppSecurityGroup
+      MetadataOptions:
+        HttpTokens: required
+      Tags:
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-product-catalog
+      UserData: !Base64
+        Fn::Sub: |
+          #!/bin/bash
+          # Output of this script lands in /var/log/cloud-init-output.log
+          set -euxo pipefail
+
+          APP_DIR=/home/ec2-user/product_catalog
+          TLS_DIR=/etc/mongo-tls
+          VENV=/opt/product-catalog-venv
+
+          # ---------- dependencies ----------
+          dnf install -y docker python3-pip openssl
+          systemctl enable --now docker
+          usermod -aG docker ec2-user
+
+          # ---------- TLS certificates for MongoDB ----------
+          # In /etc, not the app folder: the mongo container runs as uid 999 and
+          # cannot read through /home/ec2-user (mode 700).
+          mkdir -p $TLS_DIR
+          cd $TLS_DIR
+
+          openssl req -x509 -newkey rsa:2048 -days 3650 -nodes \
+            -keyout ca.key -out ca.crt -subj "/CN=local-docdb-ca"
+
+          openssl req -newkey rsa:2048 -nodes \
+            -keyout private.key -out cert_request.csr -subj "/CN=localhost"
+
+          cat > ext.cnf <<'EOF'
+          subjectAltName = DNS:localhost,IP:127.0.0.1
+          basicConstraints = critical,CA:FALSE
+          keyUsage = critical,digitalSignature,keyEncipherment
+          extendedKeyUsage = serverAuth
+          EOF
+
+          openssl x509 -req -in cert_request.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+            -out server.crt -days 825 -sha256 -extfile ext.cnf
+
+          cat private.key server.crt > server.pem
+          chown 999:999 server.pem
+          chmod 600 server.pem ca.key private.key
+          chmod 644 ca.crt
+
+          # ---------- MongoDB ----------
+          docker run -d --name docdb-local --restart unless-stopped \
+            -p 127.0.0.1:27017:27017 \
+            -e MONGO_INITDB_ROOT_USERNAME=admin \
+            -e MONGO_INITDB_ROOT_PASSWORD='${DocDbPassword}' \
+            -v $TLS_DIR:/etc/mongo-tls:ro \
+            mongo:7 \
+            --auth --tlsMode requireTLS \
+            --tlsCertificateKeyFile /etc/mongo-tls/server.pem \
+            --tlsCAFile /etc/mongo-tls/ca.crt \
+            --tlsAllowConnectionsWithoutCertificates
+
+          # ---------- application ----------
+          mkdir -p $APP_DIR
+          curl -fsSL https://github.com/aws-samples/amazon-documentdb-samples/archive/refs/heads/master.tar.gz \
+            | tar -xz -C $APP_DIR --strip-components=3 \
+              amazon-documentdb-samples-master/usecases/product_catalog
+          chown -R ec2-user:ec2-user $APP_DIR
+
+          python3 -m venv $VENV
+          $VENV/bin/pip install -r $APP_DIR/requirements.txt
+
+          cat > /etc/product-catalog.env <<EOF
+          DOCDB_HOST=localhost
+          DOCDB_PORT=27017
+          DOCDB_USERNAME=admin
+          DOCDB_PASSWORD=${DocDbPassword}
+          DOCDB_TLS_CA=$TLS_DIR/ca.crt
+          EOF
+          chmod 600 /etc/product-catalog.env
+
+          # Runs the app as a service, so it also comes back after a reboot.
+          cat > /etc/systemd/system/product-catalog.service <<EOF
+          [Unit]
+          Description=Product Catalog sample app
+          Requires=docker.service
+          After=docker.service
+
+          [Service]
+          User=ec2-user
+          WorkingDirectory=$APP_DIR
+          EnvironmentFile=/etc/product-catalog.env
+          ExecStart=$VENV/bin/python $APP_DIR/app.py
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          systemctl daemon-reload
+          systemctl enable --now product-catalog
+
+Outputs:
+
+  AppUrl:
+    Description: Product Catalog web app
+    Value: !Sub http://${AppInstance.PublicIp}:5000
+
+  ShellCommand:
+    Description: Open a shell on the instance (no SSH key needed)
+    Value: !Sub aws ssm start-session --target ${AppInstance} --region ${AWS::Region}

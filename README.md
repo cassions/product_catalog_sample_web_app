@@ -3,7 +3,7 @@
 
 ## AUTOMATIC DEPLOY WITH CLOUD FORMATION
 
-Use the template file [archtecture1-freetier-ec2-mongo-docker.yaml](Templates/archtecture1-freetier-ec2-mongo-docker.yaml) on AWS.
+Use the template file [archtecture1-freetier-ec2-mongo-docker.yaml](Templates/archtecture1-freetier-ec2-mongo-docker.yaml) on AWS Clound Formation.
 
 ## MANUAL DEPLOY
 
