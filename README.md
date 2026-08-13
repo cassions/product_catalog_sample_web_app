@@ -1,23 +1,32 @@
+# INTRODUCTION
 
-# ARCHITECTURE 1 - ALL RUNNING ON EC2 WITH MONGODB ON DOCKER (FREE)
+This repository contains cloud architecture and deploy samples (manual and automated with IaC) that demonstrate how to deploy a Sample Web Application on the AWS Cloud.
+
+The code used on the samples are from the [Product Catalog Sample Code](https://github.com/aws-samples/amazon-documentdb-samples/tree/master/usecases/product_catalog) in the repository [Amazon Documentdb Samples](https://github.com/aws-samples/amazon-documentdb-samples).
+
+# ARCHITECTURES
+
+|ARCHITECTURE|DESCRIPTION|AWS FREE TIER|
+|-|-|-|
+| ARCHITECTURE 1 | Aplication and Database layers running on single EC2 instance using MongoDB on Docker. | Yes | 
+
+## ARCHITECTURE 1 - ALL RUNNING ON EC2 WITH MONGODB ON DOCKER (FREE)
 
 The diagram bellow shows the details about the *Architecture 1* which is all self-contained in a single EC2 instance running MongoDB on Docker to avoid using DocumentDB and so keeping it on free tier.
 
 ![Architecture 1](images/aws-architecture1-freetier-ec2-mongo.png)
 
-## AUTOMATIC DEPLOY WITH CLOUD FORMATION
+### AUTOMATIC DEPLOY WITH CLOUD FORMATION
 
 Use the template file [archtecture1-freetier-ec2-mongo-docker-simplified](templates/archtecture1-freetier-ec2-mongo-docker-simplified.yaml) on AWS Cloud Formation to automatically create the server. 
 
 There is also another template [archtecture1-freetier-ec2-mongo-docker](templates/archtecture1-freetier-ec2-mongo-docker.yaml) which provides more control over VPC, Subnet, and instance type.
 
-
-
-## MANUAL DEPLOY
+### MANUAL DEPLOY
 
 To deploy this architecture manually just create an EC2 Linux instance on AWS, connect to it and follow the steps bellow.
 
-### ENVIRONMENT SETUP
+#### ENVIRONMENT SETUP
 ```
 export APP_INSTALL_FOLDER=~/product_catalog
 export DOCDB_HOST="localhost"
@@ -27,7 +36,7 @@ export DOCDB_PASSWORD="localdev123"
 export DOCDB_TLS_CA=$APP_INSTALL_FOLDER/mongo-tls/ca.crt
 
 ```
-### INSTALL DEPENDENCIES
+#### INSTALL DEPENDENCIES
 
 1. Install pip and python
 
@@ -41,7 +50,7 @@ export DOCDB_TLS_CA=$APP_INSTALL_FOLDER/mongo-tls/ca.crt
 
 `sudo systemctl enable --now docker`
 
-### INSTALL THE APP
+#### INSTALL THE APP
 
 1. Download the code
 
@@ -57,9 +66,9 @@ Download the code from GitHub
 
 `pip install -r requirements.txt`
 
-### DATABASE MANUAL DEPLOY
+#### DATABASE MANUAL DEPLOY
 
-#### CERTIFICATION CREATE STEP BY STEP
+##### CERTIFICATION CREATE STEP BY STEP
 
 1. Create a folder to install the certification files
 
@@ -95,7 +104,7 @@ EOF`
 6. Create PEM file with private and public keys
 cat private.key server.crt > server.pem
 
-#### CREATE DOCKER INSTANCE WITH MONGODB
+##### CREATE DOCKER INSTANCE WITH MONGODB
 
 1. Add permission to ec2-user to run Docker
 
@@ -127,7 +136,7 @@ cd $APP_INSTALL_FOLDER
 nohup python3 app.py &
 ```
 
-#### CREATE A SERVICE TO AUTOMATICALLY START THE APP AT BOOT
+##### CREATE A SERVICE TO AUTOMATICALLY START THE APP AT BOOT
 
 1. Create a service for the app
 ```
